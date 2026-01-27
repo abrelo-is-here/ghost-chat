@@ -1,5 +1,6 @@
 {
-  "functions": {
-    "app/api/**/*.ts": { "runtime": "nodejs18.x" }
-  }
+  "version": 3,
+  "builds": [
+    { "src": "package.json", "use": "@vercel/next" }
+  ]
 }
