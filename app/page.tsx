@@ -1,65 +1,126 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
+import { nanoid } from "nanoid";
+import { useMutation } from "@tanstack/react-query";
+import { client } from "@/lib/client";
+import { useRouter, useSearchParams } from "next/navigation";
+
+const ANIMALS = ["wolf", "hawk", "bear", "shark", "vulture", "cobra"];
+const STORAGE_KEY = "chat_username";
+
+const generateUsername = () => {
+  const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
+  return `anon_${animal}_${nanoid(4)}`.toLowerCase();
+};
 
 export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+  const [username, setUsername] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  const wasDestroyed = searchParams.get("destroyed") === "true";
+  const error = searchParams.get("error");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      setUsername(stored);
+      return;
+    }
+    const generated = generateUsername();
+    localStorage.setItem(STORAGE_KEY, generated);
+    setUsername(generated);
+  }, []);
+
+  const { mutate: createRoom, isPending } = useMutation({
+    mutationFn: async () => {
+      const res = await client.room.create.post();
+      if (res.status === 200 && res.data?.roomId) {
+        router.push(`/room/${res.data.roomId}`);
+      }
+    },
+  });
+
+  // BIOS / Boot sequence loader
+  if (!username) {
+    return (
+      <main className="min-h-screen bg-black flex flex-col items-center justify-center font-mono text-green-800 text-xs tracking-widest uppercase">
+        <div className="space-y-1 animate-pulse">
+          <p>{">"} INITIALIZING SECURE_PROTOCOLS...</p>
+          <p>{">"} ALLOCATING MEMORY...</p>
+          <p>{">"} ESTABLISHING ENCRYPTED_IDENTITY...</p>
         </div>
       </main>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-black font-mono text-green-500 p-4 relative overflow-hidden">
+      {/* SCANLINE EFFECT */}
+      <div className="pointer-events-none fixed inset-0 z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_3px,3px_100%]" />
+
+      <div className="w-full max-w-md space-y-6 z-10">
+        {/* STATUS NOTIFICATIONS */}
+        {(wasDestroyed || error) && (
+          <div className="border border-red-900 bg-red-950/20 p-4 animate-pulse">
+            <p className="text-red-500 text-xs font-bold uppercase tracking-tighter">
+              [!] {error === "room-not-found" ? "404: OBJECT NOT FOUND" : 
+                    error === "room-full" ? "ERROR: CAPACITY REACHED" : 
+                    "SUCCESS: ROOM PURGED"}
+            </p>
+            <p className="text-red-900 text-[10px] mt-1 italic">
+              {wasDestroyed ? "All session data has been zeroed out." : "Action cannot be completed."}
+            </p>
+          </div>
+        )}
+
+        <div className="text-center space-y-2 mb-8">
+          <h1 className="text-3xl font-black tracking-tighter text-green-500 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]">
+            VOID_CHAT v1.0
+          </h1>
+          <p className="text-green-900 text-[10px] uppercase tracking-[0.2em]">
+            Ephemeral . Encrypted . Trace-less
+          </p>
+        </div>
+
+        <div className="border border-green-900/50 bg-black/80 p-1 shadow-[0_0_20px_rgba(0,20,0,1)]">
+          <div className="border border-green-900/30 p-6 space-y-6">
+            <div className="space-y-3">
+              <label className="text-[10px] text-green-800 font-bold uppercase tracking-widest">
+                // ACTIVE_IDENTITY
+              </label>
+
+              <div className="relative group">
+                <div className="bg-green-950/10 border border-green-900 px-4 py-3 text-sm text-green-400">
+                  <span className="opacity-50 mr-2">$</span>
+                  {username}
+                </div>
+                <div className="absolute top-0 left-0 w-full h-full bg-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              </div>
+            </div>
+
+            <button
+              onClick={() => createRoom()}
+              disabled={isPending}
+              className="w-full group relative overflow-hidden border border-green-500 bg-transparent p-3 text-xs font-bold text-green-500 transition-all hover:bg-green-500 hover:text-black cursor-pointer disabled:opacity-30"
+            >
+              <span className="relative z-10">
+                {isPending ? "[ INITIALIZING... ]" : "[ INITIALIZE_NEW_SESSION ]"}
+              </span>
+              {/* Button Glitch Hover Effect */}
+              <div className="absolute inset-0 bg-green-400 translate-y-full group-hover:translate-y-0 transition-transform duration-100 ease-out" />
+            </button>
+          </div>
+        </div>
+
+        <div className="text-center">
+            <p className="text-green-950 text-[9px] uppercase tracking-widest">
+                Connection: Secure / Protocol: Stealth
+            </p>
+        </div>
+      </div>
     </div>
   );
 }
