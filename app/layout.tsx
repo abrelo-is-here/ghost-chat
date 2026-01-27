@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "../components/providers";
+import { Suspense } from 'react';
 
 const jetBrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
@@ -25,9 +26,11 @@ export default function RootLayout({
       <body
         className={`${jetBrainsMono.variable}`}
       >
-        <Providers>
-          {children}
-        </Providers>
+        <Suspense fallback={<div>Loading...</div>}>
+          <Providers>
+            {children}
+          </Providers>
+        </Suspense>
       </body>
     </html>
   );

@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 import { useMutation } from "@tanstack/react-query";
 import { client } from "@/lib/client";
 import { useRouter, useSearchParams } from "next/navigation";
+import React, { Suspense } from "react";
 
 const ANIMALS = ["wolf", "hawk", "bear", "shark", "vulture", "cobra"];
 const STORAGE_KEY = "chat_username";
