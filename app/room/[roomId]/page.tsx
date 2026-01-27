@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useRef, useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { useRealtime } from '@/lib/realtime-client'
-import { Suspense } from 'react'
+
 function formatTimeRemaining(seconds: number) {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
@@ -91,29 +91,29 @@ function Room() {
   }
 
   return (
-    <main className='flex flex-col h-screen max-h-screen bg-black font-mono text-green-500 selection:bg-green-500 selection:text-black'>
-      {/* SCANLINE OVERLAY */}
-      <div className="pointer-events-none fixed inset-0 z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]" />
+    <main className='flex flex-col h-screen max-h-screen bg-black font-mono text-green-500 selection:bg-green-500 selection:text-black overflow-hidden'>
+      {/* SCANLINE OVERLAY - Pointer events none is crucial */}
+      <div className="pointer-events-none fixed inset-0 z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] opacity-40 md:opacity-100" />
 
-      {/* HEADER */}
-      <header className='border-b border-green-900/50 p-4 flex items-center justify-between bg-black'>
-        <div className="flex items-center gap-6">
+      {/* HEADER - Responsive Flex */}
+      <header className='border-b border-green-900/50 p-3 md:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-black gap-4'>
+        <div className="flex items-center gap-4 md:gap-6 w-full sm:w-auto">
           <div className="flex flex-col">
-            <span className='text-[10px] text-green-800 font-bold'>// SESSION_ID</span>
+            <span className='text-[9px] md:text-[10px] text-green-800 font-bold'>// SESSION_ID</span>
             <div className="flex items-center gap-2">
-              <span className='text-sm tracking-tighter'>0x{roomId.slice(0, 8)}...</span>
+              <span className='text-xs md:text-sm tracking-tighter'>0x{roomId.slice(0, 6)}...</span>
               <button 
                 onClick={handleCopy} 
-                className="text-[9px] border border-green-900 px-1 hover:bg-green-500 hover:text-black transition-all"
+                className="text-[8px] md:text-[9px] border border-green-900 px-1 hover:bg-green-500 hover:text-black transition-all"
               >
                 [{copyState}]
               </button>
             </div>
           </div>
 
-          <div className="flex flex-col border-l border-green-900/50 pl-6">
-            <span className='text-[10px] text-green-800 font-bold'>// AUTO_PURGE</span>
-            <span className={`text-sm font-black ${timeRemaining !== null && timeRemaining < 60 ? "animate-pulse text-red-600" : "text-green-500"}`}>
+          <div className="flex flex-col border-l border-green-900/50 pl-4 md:pl-6">
+            <span className='text-[9px] md:text-[10px] text-green-800 font-bold'>// AUTO_PURGE</span>
+            <span className={`text-xs md:text-sm font-black ${timeRemaining !== null && timeRemaining < 60 ? "animate-pulse text-red-600" : "text-green-500"}`}>
               {timeRemaining !== null ? formatTimeRemaining(timeRemaining) : "CALCULATING..."}
             </span>
           </div>
@@ -121,36 +121,38 @@ function Room() {
 
         <button 
           onClick={() => destroyRoom()} 
-          className="text-[10px] border border-red-900 text-red-900 hover:bg-red-600 hover:text-white px-3 py-1 transition-all font-bold"
+          className="w-full sm:w-auto text-[9px] md:text-[10px] border border-red-900 text-red-900 hover:bg-red-600 hover:text-white px-3 py-1.5 transition-all font-bold"
         >
           [ EXECUTE_PURGE ]
         </button>
       </header>
 
-      {/* MESSAGES */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-2 scrollbar-hide bg-[radial-gradient(circle_at_center,_#041204_0%,_#000000_100%)]">
+      {/* MESSAGES - Improved scrolling and word breaking */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 scrollbar-hide bg-[radial-gradient(circle_at_center,_#041204_0%,_#000000_100%)]">
         {messages?.length === 0 && (
           <div className="flex items-center justify-center h-full opacity-20">
-            <p className="text-sm animate-pulse">LISTENING FOR INCOMING DATA...</p>
+            <p className="text-[10px] md:text-sm animate-pulse text-center">LISTENING FOR INCOMING DATA...</p>
           </div>
         )}
 
         {messages?.map((msg: any) => (
           <div key={msg.id} className="flex flex-col group border-l border-transparent hover:border-green-900 pl-2 transition-colors">
-            <div className="flex items-baseline gap-2">
-              <span className="text-[10px] text-green-900">[{format(msg.timestamp, "HH:mm:ss")}]</span>
-              <span className={`text-xs font-bold uppercase ${msg.sender === username ? "text-white" : "text-green-400"}`}>
-                {msg.sender === username ? "LOCAL_USER" : msg.sender}:
-              </span>
-              <p className="text-sm text-green-200/90 break-all">{msg.text}</p>
+            <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] text-green-900">[{format(msg.timestamp, "HH:mm:ss")}]</span>
+                <span className={`text-xs font-bold uppercase ${msg.sender === username ? "text-white" : "text-green-400"}`}>
+                  {msg.sender === username ? "LOCAL_USER" : msg.sender}:
+                </span>
+              </div>
+              <p className="text-sm text-green-200/90 break-words whitespace-pre-wrap leading-relaxed">{msg.text}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* INPUT */}
-      <div className="p-4 border-t border-green-900/50 bg-black">
-        <div className='flex items-center gap-3'>
+      {/* INPUT - Sticky at bottom */}
+      <div className="p-3 md:p-4 border-t border-green-900/50 bg-black">
+        <div className='flex items-center gap-2 md:gap-3 max-w-full'>
           <span className='text-green-500 font-bold animate-pulse'>$</span>
           <input
             ref={inputRef}
@@ -164,7 +166,7 @@ function Room() {
               }
             }}
             placeholder='await input_stream...'
-            className='flex-1 bg-transparent border-none focus:ring-0 outline-none text-green-400 placeholder:text-green-900 text-sm'
+            className='flex-1 bg-transparent border-none focus:ring-0 outline-none text-green-400 placeholder:text-green-900 text-sm md:text-base w-full min-w-0'
           />
           {isPending && <span className="text-[10px] animate-spin">/</span>}
         </div>
