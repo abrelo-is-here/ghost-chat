@@ -6,7 +6,6 @@ import { useParams, useRouter } from 'next/navigation'
 import { useRef, useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { useRealtime } from '@/lib/realtime-client'
-import { Suspense } from 'react'
 function formatTimeRemaining(seconds: number) {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60

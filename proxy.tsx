@@ -1,6 +1,3 @@
-// to define only 2 user allow in 1 chat
-// proxy is a middelware where we run it whereever we want
-
 import { NextRequest, NextResponse } from "next/server"
 import { redis } from "./lib/redis"
 import { nanoid } from "nanoid"
@@ -8,6 +5,7 @@ import { nanoid } from "nanoid"
 export const proxy = async (req: NextRequest) => {
   const pathname = req.nextUrl.pathname
 
+  // Match /room/:roomId
   const roomMatch = pathname.match(/^\/room\/([^/]+)$/)
   if (!roomMatch) return NextResponse.redirect(new URL("/", req.url))
 
@@ -17,26 +15,22 @@ export const proxy = async (req: NextRequest) => {
     `meta:${roomId}`
   )
 
+  // Room does not exist
   if (!meta) {
     return NextResponse.redirect(new URL("/?error=room-not-found", req.url))
   }
 
   const existingToken = req.cookies.get("x-auth-token")?.value
 
-  // USER IS ALLOWED TO JOIN ROOM
+  // If user already has a token in this room, allow
   if (existingToken && meta.connected.includes(existingToken)) {
     return NextResponse.next()
   }
 
-  // USER IS NOT ALLOWED TO JOIN
-  if (meta.connected.length >= 2) {
-    return NextResponse.redirect(new URL("/?error=room-full", req.url))
-  }
-
-  const response = NextResponse.next()
-
+  // Generate a new token for new user
   const token = nanoid()
 
+  const response = NextResponse.next()
   response.cookies.set("x-auth-token", token, {
     path: "/",
     httpOnly: true,
@@ -44,14 +38,13 @@ export const proxy = async (req: NextRequest) => {
     sameSite: "strict",
   })
 
-  await redis.hset(`meta:${roomId}`, {
-    connected: [...meta.connected, token],
-  })
+  // Add token to connected users
+  const updatedConnected = meta.connected ? [...meta.connected, token] : [token]
+  await redis.hset(`meta:${roomId}`, { connected: updatedConnected })
 
   return response
 }
 
 export const config = {
-    matcher: "/room/:path*" // this means if they go to any room then run the proxy path* means any roomId
+  matcher: "/room/:path*",
 }
-// next js automaticlly read this object when it runs the code to know when this proxy should run

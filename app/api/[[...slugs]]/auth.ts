@@ -18,17 +18,20 @@ export const authMiddleware = new Elysia({ name: "auth" })
   })
   .derive({ as: "scoped" }, async ({ query, cookie }) => {
     const roomId = query.roomId
-    const token = cookie["x-auth-token"].value as string | undefined
+    const token = cookie["x-auth-token"]?.value
 
     if (!roomId || !token) {
       throw new AuthError("Missing roomId or token.")
     }
 
+    // Get list of connected tokens for this room
     const connected = await redis.hget<string[]>(`meta:${roomId}`, "connected")
 
-    if (!connected?.includes(token)) {
+    // Check if token is valid
+    if (!connected || !connected.includes(token)) {
       throw new AuthError("Invalid token")
     }
 
+    // Return auth info for downstream handlers
     return { auth: { roomId, token, connected } }
   })
